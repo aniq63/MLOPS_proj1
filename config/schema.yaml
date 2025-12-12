@@ -1,0 +1,33 @@
+columns:
+  - person_age: float
+  - person_gender: category
+  - person_education : category
+  - person_income : float
+  - person_emp_exp: int
+  - person_home_ownership: category
+  - loan_amnt: float
+  - loan_intent: category
+  - loan_int_rate: float
+  - loan_percent_income: float
+  - cb_person_cred_hist_length: float
+  - credit_score: int
+  - previous_loan_defaults_on_file: category
+  -  loan_status : int
+
+numerical_columns:
+  - person_age: float
+  - person_income : float
+  - person_emp_exp: int
+  - loan_amnt: float
+  - loan_int_rate: float
+  - loan_percent_income: float
+  - cb_person_cred_hist_length: float
+  - credit_score: int
+  -  loan_status : int
+
+categorical_columns:
+  - person_gender: category
+  - person_education : category
+  - person_home_ownership: category
+  - loan_intent: category
+  - previous_loan_defaults_on_file: category
