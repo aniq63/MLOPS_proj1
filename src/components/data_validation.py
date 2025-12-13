@@ -54,19 +54,24 @@ class DataValidation:
             dataframe_columns = df.columns
             missing_numerical_columns = []
             missing_categorical_columns = []
-            for column in self._schema_config["numerical_columns"]:
+            
+            # Ensure only hashable types are processed
+            numerical_columns = [col for col in self._schema_config["numerical_columns"] if isinstance(col, (str, int, float))]
+            categorical_columns = [col for col in self._schema_config["categorical_columns"] if isinstance(col, (str, int, float))]
+
+            for column in numerical_columns:
                 if column not in dataframe_columns:
                     missing_numerical_columns.append(column)
 
-            if len(missing_numerical_columns)>0:
+            if len(missing_numerical_columns) > 0:
                 logging.info(f"Missing numerical column: {missing_numerical_columns}")
 
 
-            for column in self._schema_config["categorical_columns"]:
+            for column in categorical_columns:
                 if column not in dataframe_columns:
                     missing_categorical_columns.append(column)
 
-            if len(missing_categorical_columns)>0:
+            if len(missing_categorical_columns) > 0:
                 logging.info(f"Missing categorical column: {missing_categorical_columns}")
 
             return False if len(missing_categorical_columns)>0 or len(missing_numerical_columns)>0 else True

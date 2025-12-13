@@ -2,6 +2,7 @@ import sys
 import pandas as pd
 import numpy as np
 from typing import Optional
+import logging
 
 from src.configuration.mongo_db_connection import MongoDBClient
 from src.constants import DATABASE_NAME
@@ -23,6 +24,9 @@ class Proj1Data:
 
             df = pd.DataFrame(list(collection.find()))
             print(f"Data fecthed with len: {len(df)}")
+
+            # Log the columns fetched from MongoDB
+            logging.info(f"Fetched columns from MongoDB: {df.columns.to_list()}")
 
             if "id" in df.columns.to_list():
                 df.drop(columns=["id"], axis=1, inplace= True)

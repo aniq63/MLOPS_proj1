@@ -1,4 +1,5 @@
 columns:
+  - id : int
   - person_age: float
   - person_gender: category
   - person_education : category

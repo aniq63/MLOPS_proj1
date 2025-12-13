@@ -14,6 +14,13 @@ TRAIN_FILE_NAME: str = "train.csv"
 TEST_FILE_NAME: str = "test.csv"
 SCHEMA_FILE_PATH = os.path.join("config", "schema.yaml")
 
+
+PREPROCSSING_OBJECT_FILE_NAME = "preprocessing.pkl"
+
+TARGET_COLUMN = "loan_status"
+
+OUTLIERS_COLUMNS = ['person_age', 'person_emp_exp']
+
 """
 Data Ingestion related constant start with DATA_INGESTION VAR NAME
 """
@@ -28,3 +35,10 @@ Data Validation constants
 """
 DATA_VALIDATION_DIR_NAME = 'data_validation'
 DATA_VALIDATION_REPORT_FILE_NAME: str = "report.yaml"
+
+"""
+Data Transformation constants
+"""
+DATA_TRANSFORMATION_DIR_NAME: str = "data_transformation"
+DATA_TRANSFORMATION_TRANSFORMED_DATA_DIR: str = "transformed"
+DATA_TRANSFORMATION_TRANSFORMED_OBJECT_DIR: str = "transformed_object"
