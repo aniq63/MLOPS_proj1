@@ -37,14 +37,30 @@ class DataTransformation:
             raise MyException(e, sys)
         
     # Apply the standardScaling on Numerical features
-    def normalize_data(self) -> Pipeline:
+    def normalize_data(self, available_columns) -> Pipeline:
         try:
             logging.info("Entering the Fuction to normalize the data")
-            
+
             std = StandardScaler()
 
-            # Extract the numerical columns
-            num_columns = self._schema_config['numerical_columns']
+            # Extract the numerical columns from schema. Schema may contain list of mappings
+            num_columns_raw = self._schema_config.get('numerical_columns', [])
+
+            # Normalize schema format: convert list of dicts or strings to list of column names
+            num_columns = []
+            for item in num_columns_raw:
+                if isinstance(item, dict):
+                    for k in item.keys():
+                        num_columns.append(k.strip())
+                elif isinstance(item, str):
+                    # handle entries like 'col_name: type' if present as string
+                    if ':' in item:
+                        num_columns.append(item.split(':')[0].strip())
+                    else:
+                        num_columns.append(item.strip())
+
+            # Keep only numerical columns that actually exist in the DataFrame
+            num_columns = [c for c in num_columns if c in available_columns]
 
             # Creating preprocessor pipeline
             preprocessor = ColumnTransformer(
@@ -56,10 +72,10 @@ class DataTransformation:
 
             # Wrapping everything in a single pipeline
             final_pipeline = Pipeline(steps=[("Preprocessor", preprocessor)])
-            
+
             logging.info("Exited the normailze function")
             return final_pipeline
-        
+
         except Exception as e:
             raise MyException(e, sys) from e
 
@@ -80,15 +96,28 @@ class DataTransformation:
     
     # Drop the id column
     def drop_id_column(self, df):
-        df.drop(columns = 'id', inplace = True)
+        logging.info("Dropping 'id' column")
+        drop_col = self._schema_config['drop_columns']
+        if drop_col in df.columns:
+            df = df.drop(drop_col, axis=1)
         return df
 
     # Balance the Target column
     def balancing_target_column(self,X,y):
-        sm = SMOTE(random_state=42)
-        X_res, y_res = sm.fit_resample(X, y)
-        
-        return X_res,y_res
+        try:
+            # Ensure y is a numpy array and not a pandas Series with dict values
+            if isinstance(y, pd.Series):
+                y = y.values
+            
+            # Convert to 1D array if needed
+            y = np.asarray(y).flatten()
+            
+            sm = SMOTE(random_state=42)
+            X_res, y_res = sm.fit_resample(X, y)
+            
+            return X_res, y_res
+        except Exception as e:
+            raise MyException(e, sys) from e
 
 
     # Final pipeline
@@ -113,15 +142,28 @@ class DataTransformation:
 
             input_feature_test_df = test_df.drop(columns=[TARGET_COLUMN], axis=1)
             target_feature_test_df = test_df[TARGET_COLUMN]
+            
+            # Convert target to numeric values (handles dict or object types)
+            target_feature_train_df = pd.to_numeric(target_feature_train_df, errors='coerce')
+            target_feature_test_df = pd.to_numeric(target_feature_test_df, errors='coerce')
+            
             logging.info("Input and Target cols defined for both train and test df.")
 
 
 
             logging.info("Removing the outliers")
             logging.info("removing outliers from the train data inputs")
-            input_feature_train_df = self.remove_outliers(input_feature_train_df)
+            # Combine inputs and target so outlier removal keeps X and y aligned
+            train_combined = pd.concat([input_feature_train_df, target_feature_train_df], axis=1)
+            train_combined = self.remove_outliers(train_combined)
+            input_feature_train_df = train_combined.drop(columns=[TARGET_COLUMN], axis=1)
+            target_feature_train_df = train_combined[TARGET_COLUMN]
+
             logging.info("removing outliers from the test data inputs")
-            input_feature_test_df = self.remove_outliers(input_feature_test_df)
+            test_combined = pd.concat([input_feature_test_df, target_feature_test_df], axis=1)
+            test_combined = self.remove_outliers(test_combined)
+            input_feature_test_df = test_combined.drop(columns=[TARGET_COLUMN], axis=1)
+            target_feature_test_df = test_combined[TARGET_COLUMN]
 
 
             logging.info("Encode the Categorical data")
@@ -132,7 +174,7 @@ class DataTransformation:
 
 
             logging.info("Start Normalizing the Numerical data in train-test df")
-            preprocessor = self.normalize_data()
+            preprocessor = self.normalize_data(available_columns=input_feature_train_df.columns)
             logging.info("Initializing transformation for Training-data")
             input_feature_train_arr = preprocessor.fit_transform(input_feature_train_df)
             logging.info("Initializing transformation for Testing-data")
@@ -152,22 +194,25 @@ class DataTransformation:
 
             logging.info("SMOTEENN applied to train-test df.")
 
-            train_arr = np.c_[input_feature_train_final, np.array(target_feature_train_final)]
-            test_arr = np.c_[input_feature_test_final, np.array(target_feature_test_final)]
+            # Ensure target variables are 1D arrays for proper concatenation
+            target_feature_train_final = np.asarray(target_feature_train_final).flatten()
+            target_feature_test_final = np.asarray(target_feature_test_final).flatten()
+            
+            train_arr = np.c_[input_feature_train_final, target_feature_train_final]
+            test_arr = np.c_[input_feature_test_final, target_feature_test_final]
             logging.info("feature-target concatenation done for train-test df.")
 
             save_object(self.data_transformation_config.transformed_object_file_path, preprocessor)
-            save_numpy_array_data(self.data_transformation_config.transformed_train_file_path, array=train_arr)
+            save_numpy_array_data(self.data_transformation_config.transformed_traning_file_path, array=train_arr)
             save_numpy_array_data(self.data_transformation_config.transformed_test_file_path, array=test_arr)
             logging.info("Saving transformation object and transformed files.")
 
             logging.info("Data transformation completed successfully")
             return DataTransformationArtifact(
                 transformed_object_file_path=self.data_transformation_config.transformed_object_file_path,
-                transformed_train_file_path=self.data_transformation_config.transformed_train_file_path,
+                transformed_train_file_path=self.data_transformation_config.transformed_traning_file_path,
                 transformed_test_file_path=self.data_transformation_config.transformed_test_file_path
             )
 
         except Exception as e:
             raise MyException(e, sys)
-
